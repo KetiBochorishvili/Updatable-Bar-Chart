@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>D3 Page Template</title>
+    <script type="text/javascript" src="d3.v4.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+</head>
+<style>
+    body {
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        background: #18142F;
+        font-family: 'Inter', sans-serif;
+    }
+
+    svg {
+        position: absolute;
+        top: 50%;
+        -webkit-transform: translateY(-50%);
+        -ms-transform: translateY(-50%);
+        transform: translateY(-50%);
+    }
+
+    .container {
+        display: grid;
+        grid-template-columns: auto auto auto auto auto;
+        color: rgb(70, 64, 124);
+        grid-column-gap: 20px;
+        font-size: 18px;
+   
+        margin-top: 50px;
+        cursor:pointer;
+    }
+    p.active{
+color:rgb(116, 110, 191);
+
+    }
+</style>
+
+<body>
+    <div class="container">
+        <p class="seven menu-item" id="officeLocal" >Office - Local Projects</p>
+        <p class="seven menu-item" id="officeInternational" >Office - International Projects</p>
+        <p class="six menu-item" id="remoteLocal" >Remote - Local Projects</p>
+        <p class="six menu-item" id="remoteInternational" >Remote - International Projects</p>
+        <p class="seven active menu-item" id="All">All</p>
+    </div>
+    
+    <script type="text/javascript">
+    
+        // Your beautiful D3 code will go here
+
+        var dataset = [];
+        d3.csv("survey2020eng.csv", function (data) {
+            dataset = data;
+            console.log(dataset);
+            var filtered = dataset.filter(object => object.language != "no answer" && object.language != "neither" && object.averageMonthlyRevenue != "no answer" && object.workType != "no answer");
+            console.log(filtered);
+            var neededFiltered = filtered.map(item => ({
+                language: item.language,
+                averageMonthlyRevenue: d3.mean(item["averageMonthlyRevenue"].split('-').map(d => d.replace('+', '').replace('k', '000'))),
+                workType: item.workType
+            }));
+            console.log(neededFiltered);
+            var nestedByLanguage = d3.nest()
+                .key(function (d) { return d.language })
+                .entries(neededFiltered);
+            console.log({ nestedByLanguage });
+            var filteredColor = nestedByLanguage.filter(object => object.values.length > 5);
+            console.log({ filteredColor });
+            var arr1 = [];
+            for (var j = 0; j < filteredColor.length; j++) {
+                arr1 = arr1.concat(filteredColor[j].values);
+            }
+            console.log({ arr1 });
+
+            var offLocal = arr1.filter(item => item.workType === "Office - Local Projects")
+            var offInternational = arr1.filter(item => item.workType === "Office -  International Projects")
+            var remLocal = arr1.filter(item => item.workType === "Remote  - Local Projects")
+            var remInternational = arr1.filter(item => item.workType === "Remote  - International Projects")
+            var offLocalNested = d3.nest()
+                .key(function (d) { return d.language })
+                .entries(offLocal);
+            console.log(offLocalNested);
+            var offInternationalNested = d3.nest()
+                .key(function (d) { return d.language })
+                .entries(offInternational);
+            console.log(offInternationalNested);
+            var remLocalNested = d3.nest()
+                .key(function (d) { return d.language })
+                .entries(remLocal);
+            console.log(remLocalNested);
+            var remInternationalNested = d3.nest()
+                .key(function (d) { return d.language })
+                .entries(remInternational);
+            console.log(remInternationalNested);
+            var allNested = d3.nest()
+                .key(function (d) { return d.language })
+                .entries(arr1);
+            console.log({ allNested });
+
+            //final data
+            var officelocal = offLocalNested.map(item => ({
+                key: offLocalNested.indexOf(item),
+                topColor: function (item) { if (indexOf(item) % 3 === 0) { return "red"; } else if ((item) % 3 === 1) { return "blue" } else { return "yellow" } },
+                language: item.key,
+                averageMonthlyRevenue: d3.mean(item["values"], function (d) { return d["averageMonthlyRevenue"] }),
+                workType: "Office - Local Projects"
+            }))
+            console.log({ officelocal });
+
+            var officeinternational = offInternationalNested.map(item => ({
+                key: offInternationalNested.indexOf(item),
+                language: item.key,
+                averageMonthlyRevenue: d3.mean(item["values"], function (d) { return d["averageMonthlyRevenue"] }),
+                workType: "Office -  International Projects"
+            }))
+            console.log({ officeinternational });
+
+            var remoteinternational = remInternationalNested.map(item => ({
+                key: remInternationalNested.indexOf(item),
+                language: item.key,
+                averageMonthlyRevenue: d3.mean(item["values"], function (d) { return d["averageMonthlyRevenue"] }),
+                workType: "Remote  - International Projects"
+            }))
+            console.log({ remoteinternational });
+
+            var remotelocal = remLocalNested.map(item => ({
+                key: remLocalNested.indexOf(item),
+                language: item.key,
+                averageMonthlyRevenue: d3.mean(item["values"], function (d) { return d["averageMonthlyRevenue"] }),
+                workType: "Remote  - Local Projects"
+            }))
+            console.log({ remotelocal });
+
+            var all = allNested.map(item => ({
+                key: allNested.indexOf(item),
+                language: item.key,
+                averageMonthlyRevenue: d3.mean(item["values"], function (d) { return d["averageMonthlyRevenue"] }),
+                workType: "All"
+            }))
+            console.log({ all });
+
+            //svg
+            var w = 700;
+            var h = 450;
+            var padding = 50;
+            var key = function (d) {
+                return d.key;
+            };
+            function raise(d, i) {
+                if (!(i % 2)) {
+                    d3.select(this).raise();
+                }
+            }
+
+            var svg = d3.select("body")
+                .append("svg")
+                .attr("width", w)
+                .attr("height", h)
+                .style("background", "#18142F");
+
+            //scales
+            var yScale = d3.scaleLinear()
+                .domain([
+                    0,
+                    d3.max(all, function (d) { return d.averageMonthlyRevenue })
+                ])
+                .range([
+                    h - 2 * padding, 2 * padding
+                ]);
+            var xScale = d3.scaleBand()
+                .domain(d3.range(all.length))
+                .range([padding, w - padding]);
+
+            //g elements
+            var gElements = svg.selectAll("g")
+                .data(all, key)
+                .enter()
+                .append("g")
+                .attr("class", "bars-wrapper")
+                .attr("transform", (d, i) => {
+                    var xPos = null;
+                    var yPos = null;
+                    if (i % 2 === 0) {
+                        xPos = xScale(i) + 63;
+                        yPos = yScale(0);
+                    } else {
+                        xPos = xScale(i) + 60;
+                 
+                        yPos = yScale(0);
+                    }
+                    return "translate(" + xPos + "," + yPos + ")"
+                })
+                .each(raise);
+
+                var gradrect = gElements.append("rect")
+                .attr("fill", (d, i) => {
+                    if (i % 3 == 0) {
+                        return "url(#redGrad)"
+                    } else if (i % 3 == 1) {
+                        return "url(#blueGrad)"
+                    } else {
+                        return "url(#yellowGrad)"
+                    }
+                })
+                .attr("x", -57)
+                .attr("y", -25)
+                .attr("height", 65)
+                .attr("width", 116)
+                .attr("opacity",0.15);
+
+              
+
+
+            var top = gElements.append("rect")
+                .attr("class", "top")
+                .attr("height", 80)
+                .attr("width", 60)
+                .attr("fill", (d, i) => {
+                    if (i % 3 == 1) {
+                        return "#71D8D6"
+                    } else if (i % 3 == 0) {
+                        return "#EA6B9B"
+                    } else {
+                        return "#F9D991"
+                    }
+                })
+                .attr("transform", "skewY(35) skewX(-35) rotate(1)");
+
+
+            var right = gElements.append("rect")
+                .attr("class", "right")
+                .attr("fill", (d, i) => {
+                    if (i % 3 == 0) {
+                        return "url(#redRight)"
+                    } else if (i % 3 == 1) {
+                        return "url(#blueRight)"
+                    } else {
+                        return "url(#yellowRight)"
+                    }
+                })
+                .attr("x", 2)
+                .attr("height", 0)
+                .attr("y", 83)
+                .attr("height", 0)
+                .attr("width", 57)
+                .attr("transform", "skewY(-35)");
+
+            var left = gElements.append("rect")
+                .attr("class", "left")
+                .attr("fill", (d,i) => {
+                    if (i % 3 == 0) {
+                        return "url(#redLeft)"
+                    } else if (i % 3 == 1) {
+                        return "url(#blueLeft)"
+                    } else {
+                        return "url(#yellowLeft)"
+                    }
+                })
+                .attr("x", -57)
+                .attr("y", 80)
+                .attr("height", 0)
+                .attr("width", 60)
+                .attr("transform", "skewY(35.5)");
+
+
+                var line1= gElements.append('line')
+    .style("stroke", "grey")
+    .style("stroke-width", 1)
+    .attr("x1", (d,i)=>{
+        if(i%2==0){return 15}
+    })
+    .attr("y1", d=>yScale(d.averageMonthlyRevenue)+5)
+    .attr("x2", 17)
+    .attr("y2", d=>yScale(d.averageMonthlyRevenue)+25)
+    .attr("opacity",0);
+
+               
+
+//labels
+            var uppertext = gElements.append("text")
+                .text(function (d) {
+                    return d.language;
+                })
+                .attr("class", "uppertext")
+                .attr("text-anchor", "middle")
+                .attr("x", (d,i)=>{if (i==0){return -10}
+            else if(i==6){return 12}
+        else{return 5}})
+                .attr("y", -28)
+                .attr("font-size", "11px")
+                .attr("fill", "#429DC6");
+
+            var bottomtext = gElements.append("text")
+                .text(function (d) {
+                    return Math.round(d.averageMonthlyRevenue / 500) * 500 + " ₾";
+                })
+                .attr("class", "bottomtext")
+                .attr("text-anchor", "middle")
+                .attr("x", (d,i)=>{if (i==0){return -10}
+            else if(i==6){return 12}
+        else{return 5}})
+                .attr("y", -14)
+                .attr("font-size", "11px")
+                .attr("fill", "#429DC6");
+
+                var circleout=gElements.append("circle")
+                .attr("cx", (d,i)=>{if (i==0){return -37}
+            else if(i==6){return -15}
+        else{return -22}})
+                .attr("cy", -12)
+                .attr("r", 6)
+                .style("fill", "#429DC6");
+            
+
+                var circlin=gElements.append("circle")
+                .attr("cx", (d,i)=>{if (i==0){return -37}
+            else if(i==6){return -15}
+        else{return -22}})
+                .attr("cy", -12)
+                .attr("r", 4)
+                 .style("fill", "#18142F");
+
+                 var line=gElements.append("rect")
+                 .attr("fill", "#429DC6")
+                 .attr("x", (d,i)=>{if (i==0){return -34}
+            else if(i==6){return -12}
+        else{return -19}})
+                .attr("y", -12)
+                .attr("height", 1)
+                .attr("width", 48)
+                .attr("opacity", 0.3)
+            //transition for initial animation
+            svg.selectAll("g.bars-wrapper")
+                .data(all, key)
+                .transition()
+                .duration(1500)
+                .ease(d3.easeLinear)
+                .attr("transform", (d, i) => {
+                    var xPos = null;
+                    var yPos = null;
+                    if (i % 2 === 0) {
+                        xPos = xScale(i) + 63;
+                        yPos = yScale(d.averageMonthlyRevenue) - 10;
+                    } else {
+                        xPos = xScale(i) + 60;
+                        yPos = yScale(d.averageMonthlyRevenue) - 31;
+                    }
+                    return "translate(" + xPos + "," + yPos + ")"
+                })
+                .each(raise);
+
+
+                svg.selectAll(".right")
+                .transition()
+               // .duration(800)
+                .duration(1500)
+                .ease(d3.easeLinear)
+                .attr("y", 83)
+                .attr("height", (d, i) => { return yScale(0) - yScale(d.averageMonthlyRevenue) })
+            svg.selectAll(".left")
+                .transition()
+               // .duration(800)
+                .duration(1500)
+                .ease(d3.easeLinear)
+                .attr("y", 80)
+                .attr("height", (d, i) => { return yScale(0) - yScale(d.averageMonthlyRevenue) })
+            svg.selectAll(".top")
+                .data(all, key)
+                .transition()
+               // .delay(1000)
+               // .duration(300)
+                .ease(d3.easeLinear)
+                .attr("fill", (d, i) => {
+                    if (i % 3 == 1) {
+                        return "#71D8D6"
+                    } else if (i % 3 == 0) {
+                        return "#EA6B9B"
+                    } else {
+                        return "#F8C763"
+                    }
+                })
+
+            //gradient for yellowright
+            var colorsyellow = ["#d67e44", "#F3D05C"];
+            var yellowRight = svg.append('defs')
+                .append('linearGradient')
+                .attr('id', 'yellowRight')
+                .attr('x1', '0%')
+                .attr('x2', '30%')
+                .attr('y1', '100%')
+                .attr('y2', '0%');
+            yellowRight.selectAll('stop')
+                .data(colorsyellow)
+                .enter()
+                .append('stop')
+                .style('stop-color', function (d) { return d; })
+                .attr('offset', function (d, i) {
+                    return 100 * (i / (colorsyellow.length - 1)) + '%';
+                })
+            //gradient for yellowleft
+            var colorsyellow1 = ["#EE8D4C", "#F3D05C"];
+            var yellowLeft = svg.append('defs')
+                .append('linearGradient')
+                .attr('id', 'yellowLeft')
+                .attr('x1', '0%')
+                .attr('x2', '0%')
+                .attr('y1', '100%')
+                .attr('y2', '0%');
+            yellowLeft.selectAll('stop')
+                .data(colorsyellow1)
+                .enter()
+                .append('stop')
+                .style('stop-color', function (d) { return d; })
+                .attr('offset', function (d, i) {
+                    return 100 * (i / (colorsyellow1.length - 1)) + '%';
+                })
+            //gradient for blueright
+            var colorsblue = ["#297ac0", "#52B6C6" /*"#4aa4b2"*/];
+            var blueRight = svg.append('defs')
+                .append('linearGradient')
+                .attr('id', 'blueRight')
+                .attr('x1', '0%')
+                .attr('x2', '30%')
+                .attr('y1', '100%')
+                .attr('y2', '0%');
+            blueRight.selectAll('stop')
+                .data(colorsblue)
+                .enter()
+                .append('stop')
+                .style('stop-color', function (d) { return d; })
+                .attr('offset', function (d, i) {
+                    return 100 * (i / (colorsblue.length - 1)) + '%';
+                })
+            //gradient for blueleft
+            var colorsblue1 = ["#2E88D5", "#52B6C6"];
+            var blueLeft = svg.append('defs')
+                .append('linearGradient')
+                .attr('id', 'blueLeft')
+                .attr('x1', '0%')
+                .attr('x2', '0%')
+                .attr('y1', '100%')
+                .attr('y2', '0%');
+            blueLeft.selectAll('stop')
+                .data(colorsblue1)
+                .enter()
+                .append('stop')
+                .style('stop-color', function (d) { return d; })
+                .attr('offset', function (d, i) {
+                    return 100 * (i / (colorsblue1.length - 1)) + '%';
+                })
+            //gradient for redleft
+            var colorsred = ["#E94157", "#EA628C"];
+            var redLeft = svg.append('defs')
+                .append('linearGradient')
+                .attr('id', 'redLeft')
+                .attr('x1', '0%')
+                .attr('x2', '0%')
+                .attr('y1', '100%')
+                .attr('y2', '0%');
+            redLeft.selectAll('stop')
+                .data(colorsred)
+                .enter()
+                .append('stop')
+                .style('stop-color', function (d) { return d; })
+                .attr('offset', function (d, i) {
+                    return 100 * (i / (colorsred.length - 1)) + '%';
+                })
+            //gradient for redright
+            var colorsred = ["#d23b4e", "#EA628C"];
+            var redRight = svg.append('defs')
+                .append('linearGradient')
+                .attr('id', 'redRight')
+                .attr('x1', '0%')
+                .attr('x2', '30%')
+                .attr('y1', '100%')
+                .attr('y2', '0%');
+            redRight.selectAll('stop')
+                .data(colorsred)
+                .enter()
+                .append('stop')
+                .style('stop-color', function (d) { return d; })
+                .attr('offset', function (d, i) {
+                    return 100 * (i / (colorsred.length - 1)) + '%';
+                })
+
+                 //gradient for redgrad
+                 var colorsredgrad = ["#E95374", "#19142F"];
+            var redGrad = svg.append('defs')
+                .append('linearGradient')
+                .attr('id', 'redGrad')
+                .attr('x1', '0%')
+                .attr('x2', '0%')
+                .attr('y1', '100%')
+                .attr('y2', '0%');
+            redGrad.selectAll('stop')
+                .data(colorsredgrad)
+                .enter()
+                .append('stop')
+                .style('stop-color', function (d) { return d; })
+                .attr('offset', function (d, i) {
+                    return 100 * (i / (colorsredgrad.length - 1)) + '%';
+                })
+
+                //gradient for bluegrad
+                var colorsbluegrad = ["#71D8D6", "#19142F"];
+            var blueGrad = svg.append('defs')
+                .append('linearGradient')
+                .attr('id', 'blueGrad')
+                .attr('x1', '0%')
+                .attr('x2', '0%')
+                .attr('y1', '100%')
+                .attr('y2', '0%');
+            blueGrad.selectAll('stop')
+                .data(colorsbluegrad)
+                .enter()
+                .append('stop')
+                .style('stop-color', function (d) { return d; })
+                .attr('offset', function (d, i) {
+                    return 100 * (i / (colorsbluegrad.length - 1)) + '%';
+                })
+
+                //gradient for yellowgrad
+                var colorsyellowgrad = ["#F8C763", "#19142F"];
+            var yellowGrad = svg.append('defs')
+                .append('linearGradient')
+                .attr('id', 'yellowGrad')
+                .attr('x1', '0%')
+                .attr('x2', '0%')
+                .attr('y1', '100%')
+                .attr('y2', '0%');
+            yellowGrad.selectAll('stop')
+                .data(colorsyellowgrad)
+                .enter()
+                .append('stop')
+                .style('stop-color', function (d) { return d; })
+                .attr('offset', function (d, i) {
+                    return 100 * (i / (colorsyellowgrad.length - 1)) + '%';
+                })
+            /////////////////update for office and all cases (with 7 observations)////////////////////////////////////////////////////////////
+            d3.selectAll("p.seven")
+                .on("click", function () {
+                    d3.selectAll('p').classed('active',false)
+      d3.select(this).classed('active',true)
+   
+                    var dataset1;
+                    var paragraphID1 = d3.select(this).attr("id");
+                    if (paragraphID1 == "officeLocal") {
+                        dataset1 = officelocal;
+                    } else if (paragraphID1 == "officeInternational") {
+                        dataset1 = officeinternational;
+                    } else if (paragraphID1 == "All") {
+                        dataset1 = all;
+                    }
+                    yScale.domain([
+                        0,
+                        d3.max(dataset1, function (d) { return d.averageMonthlyRevenue })
+                    ]);
+                    xScale.domain(d3.range(dataset1.length));
+                    var barsInitial1 = svg.selectAll("g.bars-wrapper")
+                        .data(dataset1, key);
+
+                    var barsEnter1 = barsInitial1.enter()
+                        .append("g")
+                        .attr("class", "bars-wrapper")
+                        .attr("transform", (d, i) => {
+                            var xPos = null;
+                            var yPos = null;
+                            if (i % 2 === 0) {
+                                xPos = xScale(i) + 363;
+                                yPos = yScale(d.averageMonthlyRevenue) - 10;
+                            } else {
+                                xPos = xScale(i) + 360;
+                                yPos = yScale(d.averageMonthlyRevenue) - 31;
+                            }
+                            return "translate(" + xPos + "," + yPos + ")"
+                        });
+//gradient rect
+                        barsEnter1.append("rect")
+                .attr("fill", (d, i) => {
+                    if (i % 3 == 0) {
+                        return "url(#redGrad)"
+                    } else if (i % 3 == 1) {
+                        return "url(#blueGrad)"
+                    } else {
+                        return "url(#yellowGrad)"
+                    }
+                })
+                .attr("x", -57)
+                .attr("y", -25)
+                .attr("height", 65)
+                .attr("width", 116)
+                .attr("opacity",0.15);
+
+                    //top
+                    barsEnter1.append("rect")
+                        .attr("height", 80)
+                        .attr("class", "top")
+                        .attr("width", 60)
+                        // .attr("fill",(d=>d.topColor))
+                        .attr("fill", (d, i) => {
+                            if (i % 3 == 1) {
+                                return "#71D8D6"
+                            } else if (i % 3 == 0) {
+                                return "#EA6B9B"
+                            } else {
+                                return "#F8C763"
+                            }
+                        })
+                        .attr("transform", "skewY(35) skewX(-35) rotate(1)");
+                    //right
+                    barsEnter1.append("rect")
+                        .attr("class", "right")
+                        .attr("fill", (d, i) => {
+                            if (i % 3 == 0) {
+                                return "url(#redRight)"
+                            } else if (i % 3 == 1) {
+                                return "url(#blueRight)"
+                            } else {
+                                return "url(#yellowRight)"
+                            }
+                        })
+
+                        .attr("x", 2)
+                        .attr("y", 83)
+                        .attr("height", (d, i) => { return yScale(0) - yScale(d.averageMonthlyRevenue) })
+                        .attr("width", 57)
+                        .attr("transform", "skewY(-35)");
+                    //left
+                    barsEnter1.append("rect")
+                        .attr("class", "left")
+                        .attr("fill", (d, i) => {
+                            if (i % 3 == 0) {
+                                return "url(#redLeft)"
+                            } else if (i % 3 == 1) {
+                                return "url(#blueLeft)"
+                            } else {
+                                return "url(#yellowLeft)"
+                            }
+                        })
+                        .attr("x", -57)
+                        .attr("y", 80)
+                        .attr("height", d => yScale(0) - yScale(d.averageMonthlyRevenue))
+                        .attr("width", 60)
+                        .attr("transform", "skewY(35.5)");
+                    //texts
+                    barsEnter1.append("text")
+                        .text(function (d) {
+                            return d.language;
+                        })
+                        .attr("class", "uppertext")
+                        .attr("text-anchor", "middle")
+                        .attr("x", (d,i)=>{if (i==0){return -10}
+            else if(i==6){return 12}
+        else{return 5}})
+                        .attr("y", -28)
+                        .attr("font-size", "11px")
+                        .attr("fill", "#429DC6");
+                    barsEnter1.append("text")
+                        .text(function (d) {
+
+                            return Math.round(d.averageMonthlyRevenue / 500) * 500 + " ₾";
+                        })
+                        .attr("class", "bottomtext")
+                        .attr("text-anchor", "middle")
+                        .attr("x", (d,i)=>{if (i==0){return -10}
+            else if(i==6){return 12}
+        else{return 5}})
+                        .attr("y", -14)
+                        .attr("font-size", "11px")
+                        .attr("fill", "#429DC6");
+
+                        barsEnter1.append("circle")
+                .attr("cx", (d,i)=>{if (i==0){return -37}
+            else if(i==6){return -15}
+        else{return -22}})
+                .attr("cy", -12)
+                .attr("r", 6)
+                .style("fill", "#429DC6");
+            
+
+                barsEnter1.append("circle")
+                .attr("cx", (d,i)=>{if (i==0){return -37}
+            else if(i==6){return -15}
+        else{return -22}})
+                .attr("cy", -12)
+                .attr("r", 4)
+                 .style("fill", "#18142F");
+
+                 barsEnter1.append("rect")
+                 .attr("fill", "#429DC6")
+                 .attr("x", (d,i)=>{if (i==0){return -34}
+            else if(i==6){return -12}
+        else{return -19}})
+                .attr("y", -12)
+                .attr("height", 1)
+                .attr("width", 48)
+                .attr("opacity", 0.3)
+                    /////merge and update g elements
+                    var barsMerged1 = barsEnter1.merge(barsInitial1)
+
+
+                        .data(dataset1, key)
+                        .attr("transform", (d, i) => {
+                            var xPos = null;
+                            var yPos = null;
+                            if (i % 2 === 0) {
+                                xPos = xScale(i) + 63;
+                                yPos = yScale(d.averageMonthlyRevenue) - 10;
+                            } else {
+                                xPos = xScale(i) + 60;
+                                yPos = yScale(d.averageMonthlyRevenue) - 31;
+                            }
+                            return "translate(" + xPos + "," + yPos + ")"
+                        });
+                    ////update old and new elements 
+                    /*
+                           barsMerged1.selectAll(".top")
+                           
+                           .data(dataset1.key)
+                           .attr("fill",(d=>d.topColor))
+                               .attr("fill", (d, i) => {
+                                    if (i % 3 == 1) {
+                                        return "#71D8D6"
+                                    } else if (i % 3 == 0) {
+                                        return "#EA6B9B"
+                                    } else {
+                                        return "#F8C763"
+                                    }
+                                });*/
+
+
+                    barsMerged1.selectAll(".left")
+                        .data(dataset1, key)
+                        .transition()
+                .duration(1500)
+                .ease(d3.easeLinear)
+                        .attr("fill", (d, i) => {
+                            if (i % 3 == 0) {
+                                return "url(#redLeft)"
+                            } else if (i % 3 == 1) {
+                                return "url(#blueLeft)"
+                            } else {
+                                return "url(#yellowLeft)"
+                            }
+                        })
+                        .attr("height", d => yScale(0) - yScale(d.averageMonthlyRevenue));
+
+                    barsMerged1.selectAll(".right")
+                        .data(dataset1, key)
+                        .transition()
+                .duration(1500)
+                .ease(d3.easeLinear)
+                        .attr("fill", (d, i) => {
+                            if (i % 3 == 0) {
+                                return "url(#redRight)"
+                            } else if (i % 3 == 1) {
+                                return "url(#blueRight)"
+                            } else {
+                                return "url(#yellowRight)"
+                            }
+                        })
+                        .attr("height", (d, i) => { return yScale(0) - yScale(d.averageMonthlyRevenue) });
+
+                    barsMerged1.selectAll(".uppertext")
+                        .data(dataset1, key) 
+                        .text(function (d) {
+                            return d.language;
+                        })
+                        .attr("x", (d,i)=>{if (i==0){return -10}
+            else if(i==6){return 12}
+        else{return 5}});
+
+                    barsMerged1.selectAll(".bottomtext")
+                        .data(dataset1, key)
+                        .text(function (d) {
+                            return Math.round(d.averageMonthlyRevenue / 500) * 500 + " ₾";
+                        })
+                        .attr("x", (d,i)=>{if (i==0){return -10}
+            else if(i==6){return 12}
+        else{return 5}});
+                    var barsExit1 = barsInitial1.exit();
+                    barsExit1.transition()
+                        .attr('transform', 'translate(2000)')
+                        .on('end', function () {
+                            d3.select(this).remove()
+                        })
+                });
+
+            /////////////////////update for remote local and Internatioinal
+            d3.selectAll("p.six")
+                .on("click", function () {
+                    
+      d3.selectAll('p').classed('active',false)
+      d3.select(this).classed('active',true)
+   
+                    var dataset;
+                    var paragraphID = d3.select(this).attr("id");
+                    if (paragraphID == "remoteLocal") {
+                        dataset = remotelocal;
+                    } else if (paragraphID == "remoteInternational") {
+                        dataset = remoteinternational;
+                    }
+                    ///update scales
+                    yScale.domain([
+                        0,
+                        d3.max(dataset, function (d) { return d.averageMonthlyRevenue })
+                    ]);
+                    xScale.domain(d3.range(dataset.length));
+                    ///update gelements :/
+                    var barsInitial = svg.selectAll("g.bars-wrapper")
+                        .data(dataset, key);
+                    var barsEnter = barsInitial.enter();
+                    //top
+                    barsEnter.append("rect")
+                        .attr("height", 80)
+                        .attr("class", "top")
+                        .attr("width", 60)
+                        .attr("fill", (d, i) => {
+                            if (i % 3 == 1) {
+                                return "#71D8D6"
+                            } else if (i % 3 == 0) {
+                                return "#EA6B9B"
+                            } else {
+                                return "#F8C763"
+                            }
+                        })
+                        .attr("transform", "skewY(35) skewX(-35) rotate(1)");
+                    //right
+                    barsEnter.append("rect")
+                        .attr("class", "right")
+                        .attr("fill", (d, i) => {
+                            if (i % 3 == 0) {
+                                return "url(#redRight)"
+                            } else if (i % 3 == 1) {
+                                return "url(#blueRight)"
+                            } else {
+                                return "url(#yellowRight)"
+                            }
+                        })
+                        .attr("x", 2)
+                        .attr("y", 83)
+                        .attr("height", (d, i) => { return yScale(0) - yScale(d.averageMonthlyRevenue) })
+                        .attr("width", 57)
+                        .attr("transform", "skewY(-35)");
+                    ///left
+                    barsEnter.append("rect")
+                        .attr("class", "left")
+                        .attr("fill", (d, i) => {
+                            if (i % 3 == 0) {
+                                return "url(#redLeft)"
+                            } else if (i % 3 == 1) {
+                                return "url(#blueLeft)"
+                            } else {
+                                return "url(#yellowLeft)"
+                            }
+                        })
+                        .attr("x", -57)
+                        .attr("y", 80)
+                        .attr("height", d => yScale(0) - yScale(d.averageMonthlyRevenue))
+                        .attr("width", 60)
+                        .attr("transform", "skewY(35.5)");
+                    //texts
+                    barsEnter.append("text")
+                        .text(function (d) {
+                            return d.language;
+                        })
+                        .attr("class", "uppertext")
+                        .attr("text-anchor", "middle")
+                        .attr("x", (d,i)=>{if (i==0){return -10}
+            else if(i==5){return 12}
+        else{return 5}})
+                        .attr("y", -28)
+                        .attr("font-size", "11px")
+                        .attr("fill", "#429DC6");
+                    barsEnter.append("text")
+                        .text(function (d) {
+                            return Math.round(d.averageMonthlyRevenue / 500) * 500 + " ₾";
+                        })
+                        .attr("class", "bottomtext")
+                        .attr("text-anchor", "middle")
+                        .attr("x", (d,i)=>{if (i==0){return -10}
+            else if(i==5){return 12}
+        else{return 5}})
+                        .attr("y", -14)
+                        .attr("font-size", "11px")
+                        .attr("fill", "#429DC6");
+                    /////merge and update g elements
+                    var barsMerged = barsEnter.merge(barsInitial)
+                        .attr("transform", (d, i) => {
+                            var xPos = null;
+                            var yPos = null;
+                            if (i % 2 === 0) {
+                                xPos = xScale(i) + 63;
+                                yPos = yScale(d.averageMonthlyRevenue) - 10;
+                            } else {
+                                xPos = xScale(i) + 60;
+                                yPos = yScale(d.averageMonthlyRevenue) - 22;
+                            }
+                            return "translate(" + xPos + "," + yPos + ")"
+                        });
+
+                    barsMerged.selectAll(".top")
+                        .data(dataset, key)
+                        .transition()
+                .duration(1500)
+                .ease(d3.easeLinear)
+                        .attr("fill", (d, i) => {
+                            if (i % 3 == 1) {
+                                return "#71D8D6"
+                            } else if (i % 3 == 0) {
+                                return "#EA6B9B"
+                            } else {
+                                return "#F8C763"
+                            }
+                        });
+
+                    barsMerged.selectAll(".left")
+                        .data(dataset, key)
+                        .transition()
+                .duration(1500)
+                .ease(d3.easeLinear)
+                        .attr("fill", (d, i) => {
+                            if (i % 3 == 0) {
+                                return "url(#redLeft)"
+                            } else if (i % 3 == 1) {
+                                return "url(#blueLeft)"
+                            } else {
+                                return "url(#yellowLeft)"
+                            }
+                        })
+                        .attr("height", d => yScale(0) - yScale(d.averageMonthlyRevenue));
+
+                    barsMerged.selectAll(".right")
+                        .data(dataset, key)
+                        .transition()
+                .duration(1500)
+                .ease(d3.easeLinear)
+                        .attr("fill", (d, i) => {
+                            if (i % 3 == 0) {
+                                return "url(#redRight)"
+                            } else if (i % 3 == 1) {
+                                return "url(#blueRight)"
+                            } else {
+                                return "url(#yellowRight)"
+                            }
+                        })
+                        .attr("height", (d, i) => { return yScale(0) - yScale(d.averageMonthlyRevenue) });
+
+                    barsMerged.selectAll(".uppertext")
+                        .data(dataset, key)
+                        .text(function (d) {
+                            return d.language;
+                        })
+                        .attr("x", (d,i)=>{if (i==0){return -10}
+            else if(i==5){return 12}
+        else{return 5}});
+
+                    barsMerged.selectAll(".bottomtext")
+                        .data(dataset, key)
+                        .text(function (d) {
+                            return Math.round(d.averageMonthlyRevenue / 500) * 500 + " ₾";
+                        })
+                        .attr("x", (d,i)=>{if (i==0){return -10}
+            else if(i==5){return 12}
+        else{return 5}});
+
+                    var barsExit = barsInitial.exit();
+                    barsExit.transition()
+                        .attr('transform', 'translate(2000)')
+                        .on('end', function () {
+                            d3.select(this).remove()
+                        })
+
+                });
+        });
+    </script>
+</body>
+
+</html>
